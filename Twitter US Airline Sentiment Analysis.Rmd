@@ -1,0 +1,176 @@
+---
+title: "Twitter US Airline Sentiment Analysis"
+author: "Suma Gummadapu"
+date: "17/06/2022"
+output: 
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library("wordcloud")
+library(reshape2)
+library(plyr)
+library(tm)
+
+```
+
+## Summary
+The customer of airline services are always provided with a platform in Twitter whee they can tweet any views or opinions regarding the services ad travelling experience in a particular flight. This makes Twitter to contain a large amount data and information that is related to the services that airline provide to their customers. To track the satisfaction by the customers, there is always the need to explore sentiments from tweets made by customers about the airline services. Therefore, this project main objective is to perform analysis on the US Airline twitter dataset to find best and worst airline services as well as make predictions on the most common issues that has occurred during the airline services. The project creates a word cloud of negative, positive, and neutral sentiments from tweets as well as a comparison word cloud. 
+
+## Introduction
+
+Recently, the popularity of Twitter sentiment analysis have increase as it is possible to analyse the customer satisfaction for services provided online. For the airline companies, the feedback form their customers concerning their services and experience is very essential. Therefore, this project include the analysis of the US Twitter airline data set and the main problems that have been experiences during airline services have also been predicted. 
+
+## Literature Review
+In their study, Mohan & Venu (2016) plotted a sentiment mining graph from which sentiment analysis was performed in a trip review, movie review, social discussion, and product review form. The analysis involved making a difference between computer and human. Sentiment analysis in this study was based in neutral, negative, and positive commands. In the study by Da Silva et al. (2014), an ensemble sentiment classification system was developed to perform analysis for Twitter data airline services. The authors also utilized a lexicon based approach through the use of lexicon dictionary. With lexicon, it is possible to calculate sum of positive sentiment and negative setiments words that appear in a text file. 
+In a project by Hakh et al. (2017), the authors indicate that there is a rapid growth for the online media hence has create a need for the sentiment analysis. With sentiment analysis, data analysts and data scientists are able to extract feedbacks and reviews made by customers and are able to identify what customer likes and what they dislike on a given product. Sentiment analysis is also essential as the reactions, feedback, and opinions towards a specific product, of people can be extracted. In another study, Prabhakar & Sugashini (2018) indicated that there are two types of sentiments which include lexicon based sentiment and learning sentiment. With lexicon sentiment, it uses lexicon dictionary and can be used in collecting feedback from customers in the airline companies. 
+
+## Theory
+H1: Delays in flights leads to negative sentiments from the airline customers. 
+
+
+## Data
+
+The dataset has been retrieved from https://www.kaggle.com/datasets/crowdflower/twitter-airline-sentiment/download and it contains:
+
+
+
+```{r echo=FALSE}
+airline_tweets<-read.csv("C:/Users/User/Downloads/archive (7)/Tweets.csv")
+head(airline_tweets)
+
+```
+Display the names of the variables in the dataset.
+
+```{r}
+names(airline_tweets)
+```
+Identify if there are any missing values in the dataset.
+```{r}
+colSums(is.na(airline_tweets))
+```
+There are 4118 missing values which have been removed as shown below.
+```{r}
+airline_tweets <- airline_tweets[complete.cases(airline_tweets), ]
+
+```
+
+All the rows with missing values have been removed
+
+```{r}
+sum(is.na(airline_tweets))
+
+```
+
+Change the format of the tweet_created column to Date format and name it date as a new column in the dataset.
+```{r}
+
+airline_tweets$date <-  as.Date(airline_tweets$tweet_created)
+```
+
+From the text column which contained the tweets by customers, we removed stopwords, removed numbers, and removed any capitalisation.
+
+```{r}
+docs <- Corpus(VectorSource(airline_tweets$text))
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeNumbers)
+docs <- tm_map(docs, removeWords, stopwords("english"))
+docs <- tm_map(docs, removeWords, c("usairways" ,"united", "flight" , "americanair" , "jetblue" , "southwestair")) 
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, stripWhitespace)
+
+```
+Next, Term Document Matrix has been created.
+```{r}
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+```
+
+
+## Methodology
+Since we have a clean dataset, now we will perform analysis in finding distribution of sentiments for airline dataset. 
+First we get to find the positive or negative distribution of the airline sentiment.
+
+
+```{r}
+Pos_Neg = airline_tweets %>% group_by(airline_sentiment) %>% dplyr::summarise(count = n())
+Pos_Neg
+
+```
+
+Use a pie chart to visualize the distribution identified above.
+
+```{r}
+ggplot(data=Pos_Neg , aes(x="" , y=count , fill=airline_sentiment))+geom_bar(width=1,stat="identity")+
+geom_text(aes(y = count/3 + c(0, cumsum(count)[-length(count)]), 
+            label =count), size=4)+coord_polar("y") + scale_fill_manual(values=c("#ffbebe", "#fff9be", "#d4ffbe"))
+
+```
+Next, we find the distribution of positive or negative sentiments by airlines.
+
+
+```{r echo=FALSE}
+airlines= airline_tweets %>% group_by(airline) %>% dplyr::summarise(count=n())
+airlines_Pos_Neg<-dcast(airline_tweets, airline ~ airline_sentiment)
+
+```
+
+
+```{r}
+airlines_Pos_Neg$negPer = airlines_Pos_Neg$negative / (airlines_Pos_Neg$negative + airlines_Pos_Neg$positive + airlines_Pos_Neg$neutral)
+airlines_Pos_Neg = airlines_Pos_Neg[order(-airlines_Pos_Neg$negPer),] 
+airlines_Pos_Neg
+
+```
+To identify the most used words, a wordcloud has been created. 
+```{r}
+options(warn=-1)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
+
+
+
+## Results
+
+From the above performed analysis, there are some observations that were made.
+The distribution of the positive and negative airline sentiments indicate that more than half of the tweets in the dataset are negative.
+
+```{r echo=FALSE}
+Pos_Neg
+```
+The observations also made from the distribution of positive and negative sentiments by airlines illustrated that there were more than 50% of negative tweets for United, American, and US Airways.
+
+```{r echo=FALSE}
+airlines_Pos_Neg
+
+```
+
+The observations for the reasons of negative tweets for the airline services indicate that late flights and customer service issues are the main reasons for negative tweets for most of the airlines. 
+
+```{r}
+Neg_Tweets <- airline_tweets %>% filter(airline_sentiment=="negative")
+Neg_tweets_reason_airlines <- Neg_Tweets %>% group_by(airline,negativereason) %>% dplyr::summarise(count=n())%>% arrange(airline,desc(count))
+Neg_tweets_reason_airlines
+```
+
+## Implications
+
+This project did not involve full analysis and there are areas of improvement for future research. This areas include, the researchers should consider performing text mining and identify the directions of flights. This is because the customer complaints may be from specific airports. Another area of improvement is putting into consideration the type of traveller. 
+## Conclusion
+The theory on, delays in flights leads to negative sentiments from the airline customers, is true. Late flights was identified as one of the major factors that contribute to the negative sentiments among the customers. 
+
+# References
+Mohan, V., & Venu, S. H. (2016). Sentiment Analysis Applied to Airline Feedback to Boost Customersâ€™ Endearment. International Journal of Applied and Physical Sciences, 2(2), 51-58.
+
+Hakh, H., Aljarah, I., & Al-Shboul, B. (2017). Online social media-based sentiment analysis for us airline companies. New Trends in Information Technology, 176.
+
+Prabhakar, E., & Sugashini, K. (2018). New Ensemble Approach to Analyze User Sentiments from Social Media Twitter Data. The SIJ Transactions on Industrial, Financial & Business Management (IFBM), 6(1), 7-11.
